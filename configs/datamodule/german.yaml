@@ -1,0 +1,30 @@
+name: german
+batch_size: 256
+# batch_size: 100     # Louizos
+# batch_size: 128     # Moyer
+num_samples_per_class: ${num_samples_per_class}
+target:
+  _target_: src.datasets.german.GermanDataModule
+  root: ${datasets_dir}
+  batch_size: ${..batch_size}
+  val_prop: 0.2
+  num_samples_per_class: ${..num_samples_per_class}
+  num_workers: ${num_workers}
+  pin_memory: False # Only for GPUs. The batch must fit into RAM in its entirety.
+encoder:
+  hidden_dims: [64] # Moyer
+#    hidden_dims: [60]       # Louizos
+#    hidden_dims: [ 64]      # Moyer
+latent_dim: 30 # Moyer
+#latent_dim: 30     # Louizos
+#latent_dim: 30     # Moyer
+decoder:
+  hidden_dims: [64] # Moyer
+  #    hidden_dims: [60]        # Louizos
+  #    hidden_dims: [ 64]       # Moyer
+predictor:
+  hidden_dims: []
+  #    hidden_dims: []        # Louizos
+  #    hidden_dims: []        # Moyer
+evaluator:
+  _target_: src.datasets.german.GermanCommittee

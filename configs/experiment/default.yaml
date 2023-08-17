@@ -1,0 +1,24 @@
+# @package _global_
+
+defaults:
+  - override /model: ???
+  - override /datamodule: ???
+  - override /trainer: default
+  - override /callbacks: default
+  - override /logger: tensorboard
+
+  - override /hydra/sweeper: basic # use basic sweeper to do sweep grid
+  - override /hydra/launcher: ray # use ray launcher to enable parallel runs
+
+# optimized metric for hyper-parameter optimization
+optimized_metric: null
+# Available options in 'hydra/launcher':
+# - basic, ray
+
+# Available options in 'hydra/sweeper':
+# - basic, optuna
+
+# Available options in 'hydra/sweeper/sampler' for optuna:
+# - cmaes, tpe, random
+# - motpe, nsgaii (multi-objective)
+

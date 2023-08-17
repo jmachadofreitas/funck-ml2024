@@ -1,0 +1,23 @@
+name: dutch
+batch_size: 256
+num_samples_per_class: ${num_samples_per_class}
+
+target:
+  _target_: src.datasets.dutch.DutchDataModule
+  root: ${datasets_dir}
+  batch_size: ${..batch_size}
+  val_prop: 0.1
+  num_samples_per_class: ${..num_samples_per_class}
+  num_workers: 0
+  pin_memory: False # Only for GPUs. The batch must fit into RAM in its entirety.
+
+encoder:
+  hidden_dims: [64]
+latent_dim: 32
+decoder:
+  hidden_dims: [64]
+predictor:
+  hidden_dims: []
+
+evaluator:
+  _target_: src.datasets.dutch.DutchCommittee

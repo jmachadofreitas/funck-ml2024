@@ -1,0 +1,28 @@
+name: compas
+batch_size: 256
+# batch_size: 64    # Rodriguez
+num_samples_per_class: ${num_samples_per_class}
+
+target:
+  _target_: src.datasets.compas.COMPASDataModule
+  root: ${datasets_dir}
+  batch_size: ${..batch_size}
+  val_prop: 0.1
+  num_samples_per_class: ${..num_samples_per_class}
+  num_workers: 0
+  pin_memory: False
+
+encoder:
+  hidden_dims: [32]
+#    hidden_dims: [100]  # Rodriguez
+latent_dim: 8
+#latent_dim: 2      # Rodriguez
+decoder:
+  hidden_dims: [32]
+#    hidden_dims: [100]  # Rodriguez
+predictor:
+  hidden_dims: []
+#    hidden_dims: []    # Rodriguez
+
+evaluator:
+  _target_: src.datasets.compas.COMPASCommittee

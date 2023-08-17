@@ -1,0 +1,22 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - override /datamodule: ???
+  - override /model: ???
+
+alpha: ???
+beta: ???
+gamma: 0 # MMD
+latent_dim: ${datamodule.latent_dim}
+
+name: alpha-beta-tradeoff
+
+hydra:
+  run:
+    dir: ${experiments_dir}/${name}/${datamodule.name}/${model.name}/${hydra.job.override_dirname}/seed=${seed}
+  sweep:
+    dir: ${experiments_dir}/${name}/
+    subdir: ./${datamodule.name}/${model.name}/${hydra.job.override_dirname}/seed=${seed}
+  sweeper:
+    max_batch_size: 4

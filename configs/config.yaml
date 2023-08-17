@@ -1,0 +1,99 @@
+# @package _global_
+
+# Default experiment
+# See: https://hydra.cc/docs/patterns/configuring_experiments
+
+# Available options in 'hydra/launcher':
+# - basic, ray
+
+# Available options in 'hydra/sweeper':
+# - basic, optuna
+
+# Available options in 'hydra/sweeper/sampler' for optuna:
+# - cmaes, tpe, random
+# - motpe, nsgaii (multi-objective)
+
+# Default training configuration
+defaults:
+  - _self_ # Items in default list override fields in this file
+  - model: cpfsi # model
+  - datamodule: ??? # datamodule
+
+  - trainer: default # default, debug, dpp, ...
+  - callbacks: default # default, none
+  - logger: tensorboard # tensorboard, ...
+
+  # enable color logging
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+  # Sweeper and Launcher
+  - override /hydra/sweeper: basic # use basic sweeper to do sweep grid
+  # - override /hydra/launcher: ray   # use ray launcher to enable parallel runs
+  - override /hydra/launcher: joblib # use joblib launcher to enable parallel runs
+
+# Path to original working directory
+# hydra hijacks working directory by changing it to the current log directory,
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
+work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data
+datasets_dir: ${work_dir}/datasets/
+
+# pretty print config at the start of the run using Rich library
+print_config: True
+
+# disable python warnings if they annoy you
+ignore_warnings: True
+
+# optimized metric for hyper-parameter optimization
+optimized_metric: null
+
+# experiment details
+name: ???
+experiments_dir: experiments
+num_samples_per_class: -1
+seed: 12345 # seed for random number generators in pytorch, numpy, and python.random
+save_representations: False
+eval_after_training: True
+dry_run: False
+
+# Resources
+num_workers: 0 # DataLoader workers (0 if all data fits in memory)
+cuda_device_order: "PCI_BUS_ID" # CUDA environment variables
+cuda_visible_devices: "0" # Pick GPU number from nvidia-smi or gpustat
+
+# the default output structure, possibly modified in experiments' config
+# See https://hydra.cc/docs/configure_hydra/workdir/
+#   - hydra.job.override_dirname - CLI's overrides
+#   - hydra.job.name - name of the python file
+hydra:
+  run:
+    dir: ${experiments_dir}/${now:%Y-%m-%d_%H-%M-%S}/${hydra.job.override_dirname}/seed=${seed}
+  sweep:
+    dir: ${experiments_dir}/${now:%Y-%m-%d_%H-%M-%S}/
+    subdir: ./${hydra.job.override_dirname}/seed=${seed}
+  job:
+    config:
+      override_dirname:
+        kv_sep: "="
+        item_sep: ","
+        exclude_keys:
+          - experiments_dir
+          - experiment
+          - datamodule
+          - model
+          - seed
+          - trainer
+          - trainer.enable_progress_bar
+          - trainer.max_epochs
+          - num_cpus
+          - cuda_visible_devices
+          - save_representations
+    chdir: True
+  sweeper:
+    max_batch_size: 4 # Number of concurrent jobs
+  launcher:
+    n_jobs: 4 # 12
+    batch_size: 4
+    pre_dispatch: n_jobs

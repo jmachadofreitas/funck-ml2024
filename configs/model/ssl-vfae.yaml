@@ -1,0 +1,27 @@
+defaults:
+  - default
+
+name: SemiVFAE
+latent_dim: ${latent_dim}
+beta: ${beta}
+gamma: ${gamma}
+lr: 1e-4
+
+target:
+  _target_: src.models.vfae.SemiVFAE
+
+qz1_xs:
+  hidden_dims: ${datamodule.encoder.hidden_dims}
+
+qz2_z1y:
+  hidden_dims: ${datamodule.encoder.hidden_dims}
+
+pz1_z2y:
+  hidden_dims: ${datamodule.decoder.hidden_dims}
+  output_type: "num"
+
+qy_z1:
+  hidden_dims: ${datamodule.predictor.hidden_dims}
+
+px_z1s:
+  hidden_dims: ${datamodule.decoder.hidden_dims}

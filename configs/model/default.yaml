@@ -1,0 +1,5 @@
+lr: 1e-3
+num_samples: 1
+nonlinearity: relu
+# b1: 0.9
+# b2: 0.999

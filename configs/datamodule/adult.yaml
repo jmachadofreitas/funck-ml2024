@@ -1,0 +1,37 @@
+name: adult
+batch_size: 256
+#batch_size:  100  # Louizos
+#batch_size:  128  # Moyer
+#batch_size: 1024  # Rodriguez
+num_samples_per_class: ${num_samples_per_class}
+
+target:
+  _target_: src.datasets.adult.AdultDataModule
+  root: ${datasets_dir}
+  batch_size: ${..batch_size}
+  val_prop: 0.1
+  num_samples_per_class: ${..num_samples_per_class}
+  num_workers: 0
+  pin_memory: False # Only for GPUs. The batch must fit into RAM in its entirety.
+
+encoder:
+  hidden_dims: [64]
+#    hidden_dims: [100]  # Louizos
+#    hidden_dims: [ 64]  # Moyer
+#    hidden_dims: [100]  # Rodriguez
+latent_dim: 30 # Moyer
+#latent_dim: 50  # Louizos
+#latent_dim: 30  # Moyer
+#latent_dim:  2  # Rodriguez
+decoder:
+  hidden_dims: [64]
+#    hidden_dims: [100]  # Louizos
+#    hidden_dims: [ 64]  # Moyer
+#    hidden_dims: [100]  # Rodriguez
+predictor:
+  hidden_dims: []
+#    hidden_dims: []  # Louizos
+#    hidden_dims: []  # Moyer
+
+evaluator:
+  _target_: src.datasets.adult.AdultCommittee

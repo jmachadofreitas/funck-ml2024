@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - override /datamodule: ???
+
+# name: ${hydra:job.name}
+name: baseline
+
+hydra:
+  run:
+    dir: ${experiments_dir}/${name}/${datamodule.name}/seed=${seed}
+  sweep:
+    dir: ${experiments_dir}/${name}/
+    subdir: ./${datamodule.name}/${hydra.job.override_dirname}/seed=${seed}
+  sweeper:
+    max_batch_size: 6

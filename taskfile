@@ -1,0 +1,303 @@
+#!/bin/bash
+
+# Enable shell strict mode
+set -euo pipefail
+
+# Exported
+export CUDA_DEVICE_ORDER="PCI_BUS_ID"
+export CUDA_DEVICES_VISIBLE=6
+
+# Global Variables
+EXPERIMENTS_DIR=experiments
+EXPERIMENT=alpha-beta-tradeoff
+MAX_EPOCHS=200
+DATASET=(adult dutch credit compas)
+MODEL="${MODEL:-'cpfsi'}"
+NUM_SAMPLES_PER_CLASS="${NUM_SAMPLES_PER_CLASS:-8}"
+
+TRAINER=default
+SEED=54321
+NUM_CPUS=4
+NUM_GPUS=1
+
+TMUX_JOB=${TMUX_JOB:-false}
+
+
+# Functions ============================================================================================================
+
+# shellcheck disable=SC2086
+summarize() {
+  echo "=== Summarize ==="
+  local ds
+  for ds in "${DATASET[@]}"; do
+    echo python -um src.tools summarize -e "$EXPERIMENTS_DIR/$1/$ds/" ${2:-`:`}
+    python -um src.tools summarize -e "$EXPERIMENTS_DIR/$1/$ds/" ${2:-`:`}
+  done
+}
+
+# Tasks =======================
+test() {
+  python -um src.datasets.diabetes
+}
+
+all() {
+  baseline; alpha-beta-tradeoff; ssl-tradeoff
+}
+
+
+baseline() {
+  echo "=== Baseline ==="
+  local dataset
+  dataset=`join_by , "${DATASET[@]}"`
+  clean-baseline
+  python -um src.baseline --multirun \
+  +experiment=baseline \
+    datamodule="$dataset" \
+    seed=$SEED \
+    experiments_dir="$EXPERIMENTS_DIR"
+  summarize baseline "-f baseline"
+}
+
+
+evaluate() {
+  local experiment dataset max_batch_size
+  experiment="alpha-beta-tradeoff"
+  max_batch_size=25
+  for dataset in "${DATASET[@]}"; do
+    python -um src.eval \
+    --experiments_dir "${EXPERIMENTS_DIR}" \
+    --experiment "${experiment}" \
+    --dataset "${dataset}" \
+    --num_cpus "${max_batch_size}"
+  done
+  summarize ${experiment}
+
+}
+
+alpha-beta-tradeoff() {
+  echo "=== Alpha-Beta Tradeoff ==="
+
+  _cpf() {
+    echo "====== CPF ======"
+    python -um src.train --multirun \
+      +experiment=alpha-beta-tradeoff \
+      datamodule="${dataset}" \
+      model="${model}" \
+      seed="${seed}" \
+      alpha="${params}" \
+      beta=0  \
+      latent_dim="${latent_dim}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}"
+  }
+
+  _cfb() {
+    echo "====== CFB ======"
+    python -um src.train --multirun \
+      +experiment=alpha-beta-tradeoff \
+      datamodule="${dataset}" \
+      model="${model}" \
+      seed="${seed}" \
+      alpha=0 \
+      beta="${params}"  \
+      latent_dim="${latent_dim}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}"
+  }
+
+  _ibsi() {
+    echo "====== IBSI ======"
+    python -um src.train --multirun \
+      +experiment=alpha-beta-tradeoff \
+      datamodule="${dataset}" \
+      model="ibsi" \
+      seed="${seed}" \
+      alpha="${ibsi_params}" \
+      beta="${params}"  \
+      latent_dim="${latent_dim}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}"
+  }
+
+  _cpfsi() {
+    echo "====== CPFSI ======"
+    python -um src.train --multirun \
+      +experiment=alpha-beta-tradeoff \
+      datamodule="${dataset}" \
+      model="${model}" \
+      seed="${seed}" \
+      alpha="${params}" \
+      beta="${params}"  \
+      latent_dim="${latent_dim}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}"
+  }
+  local dataset model seed ibsi_params params max_epochs max_batch_size
+  seed=12345,12346,12347,12348,12349
+  dataset=`join_by , "${DATASET[@]}"`
+  model=cpfsi
+  latent_dim=16,32,2
+  params="1,4,16,64,256,1024"
+  ibsi_params="0.001,0.01,0.1,0.5,1"
+  max_epochs=${MAX_EPOCHS}
+  max_batch_size=10
+  clean-experiment alpha-beta-tradeoff
+  _cpf; _cfb; _ibsi; _cpfsi
+  summarize alpha-beta-tradeoff
+}
+
+ssl-tradeoff() {
+  echo "=== SSL Experiment ==="  # No MMD
+
+  _none() {
+    echo "====== No Supervision: CPF, VFAE  ======"
+    python -um src.train --multirun \
+      +experiment=ssl-tradeoff \
+      datamodule="${dataset}" \
+      num_samples_per_class="-1" \
+      model="cpfsi,vfae" \
+      alpha="1,4,16,64" \
+      beta=0 \
+      seed="${seed}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}" ;\
+  }
+
+  _full() {
+    echo "====== Fully-supervised: IBSI, CPFSI, ======"
+    python -um src.train --multirun \
+      +experiment=ssl-tradeoff \
+      datamodule="${dataset}" \
+      num_samples_per_class="-1" \
+      model="cpfsi,ibsi" \
+      alpha=1 \
+      beta="${beta}" \
+      seed="${seed}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}" ;\
+  }
+
+  _cpfsi() {
+    echo "====== Semi-supervised: IBSI, CPFSI ======"
+    python -um src.train --multirun \
+      +experiment=ssl-tradeoff \
+      datamodule="${dataset}" \
+      num_samples_per_class="${num_samples_per_class}" \
+      model="ssl-cpfsi" \
+      alpha=1 \
+      beta="${beta}" \
+      seed="${seed}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}" ;\
+  }
+
+  _ibsi() {
+    echo "====== Semi-supervised: IBSI ======"
+    python -um src.train --multirun \
+      +experiment=ssl-tradeoff \
+      datamodule="${dataset}" \
+      num_samples_per_class="${num_samples_per_class}" \
+      model="ssl-ibsi" \
+      alpha="${ibsi_params}" \
+      beta="${beta}" \
+      seed="${seed}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}" ;\
+  }
+
+  _vfae() {
+    echo "====== Semi-supervised: VFAE ======"
+    python -um src.train --multirun \
+      +experiment=ssl-tradeoff \
+      datamodule="${dataset}" \
+      num_samples_per_class="${num_samples_per_class}" \
+      model="ssl-vfae" \
+      alpha=1 \
+      beta="${beta}" \
+      seed="${seed}" \
+      trainer.max_epochs="${max_epochs}" \
+      hydra.sweeper.max_batch_size="${max_batch_size}" \
+      experiments_dir="${EXPERIMENTS_DIR}" ;\
+  }
+  local dataset model seed num_samples_per_class ibsi_params beta max_epochs max_batch_size
+  seed=12345,12346,12347,12348,12349
+  dataset=`join_by , "${DATASET[@]}"`
+  ibsi_params="0.001,0.01,0.1,0.5,1"
+  beta="1,4,16,64,256,1024"
+  num_samples_per_class="4,8,16,32,64,128,256"
+  max_epochs=200
+  max_batch_size=10
+  clean-experiment ssl-tradeoff
+  _vfae; _ibsi; _cpfsi; _full; _none;
+  summarize ssl-tradeoff
+}
+
+
+# Utils ================================================================================================================
+_eval() {
+  echo ">>> ${*}"; eval "${@}"
+}
+
+join_by() {
+  local d=${1-} f=${2-}
+  if shift 2; then
+    printf %s "$f" "${@/#/$d}"
+  fi
+}
+
+printfn() {
+  declare -f "$@"
+}
+
+pprintfn() {
+  sed -n "/^$1/,/^}$/p" ./taskfile
+}
+
+clean-baseline() {
+  local experiment=baseline
+  local dataset
+  for dataset in "${DATASET[@]}"; do
+    _eval "rm -rf $EXPERIMENTS_DIR/$experiment/$dataset"
+  done
+}
+
+clean-experiment() {
+  local experiment=${1:-$EXPERIMENT}
+  local dataset
+  for dataset in "${DATASET[@]}"; do
+    _eval "rm -rf $EXPERIMENTS_DIR/$experiment/$dataset"
+  done
+}
+
+
+main() {
+  # Tries to run the parameter as if it was a function
+  # Reference: https://stackoverflow.com/a/16159057/3203441
+  if declare -f "$1" > /dev/null; then
+
+    # Print function declaration
+    pprintfn "${@}"
+
+    # call arguments verbatim
+    if [ "${TMUX_JOB}" = true ]; then
+      echo TMUX_JOB="${TMUX_JOB} >>> ${*}"
+      tmux new-session -d -s "${@}" "TMUX_JOB=false ./taskfile ${*} > tmux-job.log 2> err.log"
+    else
+      "${@}" # 2> err.log
+    fi
+  else
+    # Show a helpful error
+    echo "'$1' is not a known function name" >&2
+    exit 1
+  fi
+}
+
+main "${@}"

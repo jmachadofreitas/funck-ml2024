@@ -1,0 +1,33 @@
+name: funck
+channels:
+    #- pytorch
+    #- conda-forge
+    - defaults
+dependencies:
+    - python=3.8
+    - pip
+    - pip:
+          - torch
+          - torchvision
+          - torchaudio
+          - torchmetrics==0.8
+          - pandas<2
+          - scikit-learn==0.24
+          - seaborn
+          - jupyter
+          - pytorch-lightning==1.8.6
+          - tinydb
+          - ray[default]
+          - joblib==1.3.2
+          - hydra-core
+          - hydra-ray-launcher
+          - hydra-joblib-launcher==1.2.0
+          - hydra-optuna-sweeper
+          - rich
+          - hydra_colorlog
+          - python-dotenv
+          - category_encoders==2.6.2
+          - pfevaluator==1.1.0
+          - pymoo==0.6.0.1
+          - pygmo==2.19.5
+          - xlrd>=2.0.1
