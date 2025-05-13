@@ -2,7 +2,7 @@
 
 <span style="text-align: center;">
 
-# Information Funnels and Bottlenecks for Invariant Representation Learning
+# Trustworthy Representation Learning via Information Funnels and Bottlenecks
 
 </span>
 
