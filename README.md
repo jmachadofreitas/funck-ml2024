@@ -28,12 +28,22 @@ conda activate torch
 ```
 
 ## Citing
+
 ```text
-@misc{defreitas2022funck,
-    author = {de Freitas, João Machado and Geiger, Bernhard C.},
-    title = {{Information Funnels and Bottlenecks for Invariant Representation Learning}},
-    publisher = {arXiv},
-    year = {2022},
-    url = {https://arxiv.org/abs/2211.01446}
+@ARTICLE{defreitas2025trustworthy,
+    author  = {de Freitas, Jo{\~a}o Machado and Geiger, Bernhard C.},
+    title   = {Trustworthy Representation Learning via {Information} Funnels and
+               Bottlenecks},
+    journal = {Machine Learning},
+    year    = {2025},
+    month   = nov,
+    volume  = {114},
+    number  = {12},
+    pages   = {267}, % article number
+    url     = {https://doi.org/10.1007/s10994-025-06924-9},
+    doi     = {10.1007/s10994-025-06924-9},
+    issn    = {1573-0565},
+    publisher = {Springer Nature},    
+    language  = "en"
 }
 ```
